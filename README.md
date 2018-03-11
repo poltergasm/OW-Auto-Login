@@ -13,5 +13,3 @@ gcc -o login autologin.c
 ```
 
 As it's all self contained, you can just add a shortcut to the desktop and you're good to go.
-
-**At the time of writing, it isn't reading from conf files yet, so you need to change `*userName` and `*password` in `autologin.c`. I'll get there. Give me time.**
