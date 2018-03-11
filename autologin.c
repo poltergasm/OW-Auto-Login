@@ -1,28 +1,72 @@
-#define WINVER 0x0500
-#include <windows.h>
-#include <stdio.h>
- 
+#include "autologin.h"
+
+struct config {
+   char userName[MAXBUF];
+   char password[MAXBUF];
+   char path[MAXBUF];
+};
+
+void pressKey(SHORT key)
+{
+    ip.type = INPUT_KEYBOARD;
+    ip.ki.wVk = key;
+    ip.ki.wScan = 0;
+    ip.ki.dwFlags = 0;
+    ip.ki.time = 0;
+    ip.ki.dwExtraInfo = 0;
+    SendInput(1, &ip, sizeof(INPUT));
+}
+
+struct config get_config(char *filename) 
+{
+        struct config configstruct;
+        FILE *file = fopen (filename, "r");
+
+        if (file != NULL) {
+            char line[MAXBUF];
+            int i = 0;
+
+            while(fgets(line, sizeof(line), file) != NULL) {
+                char *cfline;
+                cfline = strstr((char *)line,DELIM);
+                cfline = cfline + strlen(DELIM);
+
+                if (i == 0) {
+                    memcpy(configstruct.userName,cfline,strlen(cfline));
+                } else if (i == 1) {
+                    memcpy(configstruct.password,cfline,strlen(cfline));
+                } else if (i == 2) {
+                    memcpy(configstruct.path, cfline, strlen(cfline));
+                }
+                
+                i++;
+        }
+        fclose(file);
+    }
+    
+    return configstruct;
+}
+
 int main(int argc, char* argv[])
 {
 
     // we use the window title to make sure the game is open
     char *windowTitle = "Overwatch";
-    char *userName = "foo@example.com";
-    char *password = "myeasypassword";
+    struct config configstruct;
+    configstruct = get_config(CONFIG_PATH);
 
     // get the current keyboard layout
     HKL currentKBL = GetKeyboardLayout(0);
 
-    // open the process
-    char szPath[] = "C:\\Program Files (x86)\\Overwatch\\Overwatch.exe";
     PROCESS_INFORMATION pif;
     STARTUPINFO si;
 
     ZeroMemory(&si, sizeof(si));
     si.cb = sizeof(si);
 
+    // open the process
     BOOL bRet = CreateProcess(
-        szPath,
+        configstruct.path,
         NULL,
         NULL,
         NULL,
@@ -35,19 +79,18 @@ int main(int argc, char* argv[])
     );
  
     if (bRet == FALSE) {
-        fprintf(stderr, "Failed to open %s\n", szPath);
+        fprintf(stderr, "Failed to open %s\n", configstruct.path);
         return 1;
     }
 
     unsigned int i = 0;
-    unsigned int userLen = strlen(userName);
-    unsigned int passLen = strlen(password);
+    unsigned int userLen = strlen(configstruct.userName);
+    unsigned int passLen = strlen(configstruct.password);
     SHORT kc;
-    INPUT ip;
 
     printf("Running ");
     while(1) {
-        HWND window = FindWindow(NULL, TEXT("Overwatch"));
+        HWND window = FindWindow(NULL, windowTitle);
         if (window != NULL) {
             printf(" OK\n");
 
@@ -60,60 +103,45 @@ int main(int argc, char* argv[])
 
             // enter the email
             for (i = 0; i < userLen; i++) {
-                kc = VkKeyScanEx(userName[i], currentKBL);
+                kc = VkKeyScanEx(configstruct.userName[i], currentKBL);
                 // if it's an @ symbol we need to do some weird shit
-                if (userName[i] == '@') {
-                    // Press the "Ctrl" key
+                if (configstruct.userName[i] == '@') {
+                    // press the "Shift" key
                     ip.ki.wVk = VK_SHIFT;
                     ip.ki.dwFlags = 0; // 0 for key press
                     SendInput(1, &ip, sizeof(INPUT));
              
-                    // Press the "V" key
+                    // press the single quote key
                     ip.ki.wVk = kc;
                     ip.ki.dwFlags = 0; // 0 for key press
                     SendInput(1, &ip, sizeof(INPUT));
              
-                    // Release the "V" key
+                    // release the single quote key
                     ip.ki.wVk = kc;
                     ip.ki.dwFlags = KEYEVENTF_KEYUP;
                     SendInput(1, &ip, sizeof(INPUT));
              
-                    // Release the "Ctrl" key
+                    // release the "Shift" key
                     ip.ki.wVk = VK_SHIFT;
                     ip.ki.dwFlags = KEYEVENTF_KEYUP;
                     SendInput(1, &ip, sizeof(INPUT));
                 } else {
-                    ip.type = INPUT_KEYBOARD;
-                    ip.ki.wVk = kc;
-                    ip.ki.wScan = 0;
-                    ip.ki.dwFlags = 0;
-                    ip.ki.time = 0;
-                    ip.ki.dwExtraInfo = 0;
-                    SendInput(1, &ip, sizeof(INPUT));
+                    pressKey(kc);
                 }
                 Sleep(100);
             }
 
             // tab then enter password
-            ip.type = INPUT_KEYBOARD;
-            ip.ki.wVk = VK_TAB;
-            ip.ki.wScan = 0;
-            ip.ki.dwFlags = 0;
-            ip.ki.time = 0;
-            ip.ki.dwExtraInfo = 0;
-            SendInput(1, &ip, sizeof(INPUT));
+            pressKey(VK_TAB);
             
             for (i = 0; i < passLen; i++) {
-                kc = VkKeyScanEx(password[i], currentKBL);
-                ip.type = INPUT_KEYBOARD;
-                ip.ki.wVk = kc;
-                ip.ki.wScan = 0;
-                ip.ki.dwFlags = 0;
-                ip.ki.time = 0;
-                ip.ki.dwExtraInfo = 0;
-                SendInput(1, &ip, sizeof(INPUT));
+                kc = VkKeyScanEx(configstruct.password[i], currentKBL);
+                pressKey(kc);
+                Sleep(100);
             }
 
+            // finally, hit enter to submit
+            pressKey(VK_RETURN);
             break;
         }
 
