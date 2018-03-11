@@ -11,13 +11,14 @@ INPUT ip;
 
 // routines
 void pressKey(SHORT key);
+void chomp(char *s);
 
-/**struct config {
-   char *userName;
-   char *password;
-   char *path;
-};
+typedef struct _config_t {
+   char userName[MAXBUF];
+   char password[MAXBUF];
+   char path[MAXBUF];
+} config_t;
 
-struct config get_config(char *filename);*/
+config_t get_config(char *filename);
 
 //struct config get_config(char *filename);

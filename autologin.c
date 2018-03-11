@@ -1,10 +1,11 @@
 #include "autologin.h"
 
-struct config {
-   char userName[MAXBUF];
-   char password[MAXBUF];
-   char path[MAXBUF];
-};
+void chomp(char *s)
+{
+    while(*s && *s != '\n' && *s != '\r') s++;
+ 
+    *s = 0;
+}
 
 void pressKey(SHORT key)
 {
@@ -17,9 +18,9 @@ void pressKey(SHORT key)
     SendInput(1, &ip, sizeof(INPUT));
 }
 
-struct config get_config(char *filename) 
+config_t get_config(char *filename) 
 {
-        struct config configstruct;
+        config_t configstruct;
         FILE *file = fopen (filename, "r");
 
         if (file != NULL) {
@@ -28,6 +29,8 @@ struct config get_config(char *filename)
 
             while(fgets(line, sizeof(line), file) != NULL) {
                 char *cfline;
+                // YOU SHALL NOT PASS, NEWLINE
+                chomp(cfline);
                 cfline = strstr((char *)line,DELIM);
                 cfline = cfline + strlen(DELIM);
 
@@ -52,7 +55,7 @@ int main(int argc, char* argv[])
 
     // we use the window title to make sure the game is open
     char *windowTitle = "Overwatch";
-    struct config configstruct;
+    config_t configstruct;
     configstruct = get_config(CONFIG_PATH);
 
     // get the current keyboard layout
